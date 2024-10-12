@@ -1,0 +1,16 @@
+session_name: Typeraider
+windows:
+  - window_name: Typeraider
+    layout: main-vertical
+    options:
+      main-pane-width: 20%
+    panes:
+      - shell_command:
+          - cd ~/Documents/Notes/Projects/typeraider
+          # - nvim Notes.md ToDo.md
+          - open-project
+      - shell_command:
+          - tmux resizep -y 85%
+          - filelist-open "startup_files.txt"
+        focus: true
+      - clear

@@ -11,4 +11,26 @@ _site
 .jekyll-cache/
 .jekyll-metadata
 aider/__version__.py
-.venv/
+.venv/# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# Envs
+.env
+.envrc
+
+# Logs
+.log
+
+# Cpython
+__pycache__/
+
+# Misc
+
+
