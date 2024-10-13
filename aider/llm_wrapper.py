@@ -3,4 +3,44 @@
 #      - Or default to passing back the plain response?
 #      - Or default to restructuring the plain response and passig that?
 
+import functools
+import json
+from datetime import datetime
 
+
+def log_io_to_file(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        func_name = func.__name__
+
+        input_log = (
+            f"[{timestamp}] {func_name} - Inputs: {json.dumps(kwargs, default=str)}\n"
+        )
+
+        result = func(*args, **kwargs)
+
+        output_log = (
+            f"[{timestamp}] {func_name} - Outputs: {json.dumps(result, default=str)}\n"
+        )
+
+        with open("litellm_io_log.txt", "a") as f:
+            f.write(input_log)
+            f.write(output_log)
+
+        return result
+
+    return wrapper
+
+
+class LiteLLMLogger:
+    def __init__(self, litellm_instance):
+        self.litellm = litellm_instance
+
+    @log_io_to_file
+    def completion(self, *args, **kwargs):
+        return self.litellm.completion(*args, **kwargs)
+
+    @log_io_to_file
+    def embedding(self, *args, **kwargs):
+        return self.litellm.embedding(*args, **kwargs)

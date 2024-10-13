@@ -2,6 +2,8 @@ import importlib
 import os
 import warnings
 
+from .llm_wrapper import LiteLLMLogger
+
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 AIDER_SITE_URL = "https://aider.chat"
@@ -35,6 +37,7 @@ class LazyLiteLLM:
         self._lazy_module._logging._disable_debugging()
 
 
-litellm = LazyLiteLLM()
+litellm_instance = LazyLiteLLM()
+litellm = LiteLLMLogger(litellm_instance)
 
 __all__ = [litellm]

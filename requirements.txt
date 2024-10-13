@@ -1,4 +1,5 @@
 aider-chat @ git+https://github.com/Bullish-Design/typeraider.git@77bd7d4bf7845bde906110ffbc6b22010b6fd439
+-e file:///home/andrew/Documents/Projects/typeraider
 aiohappyeyeballs==2.4.0
 aiohttp==3.10.5
 aiosignal==1.3.1

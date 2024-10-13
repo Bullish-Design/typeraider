@@ -4,7 +4,7 @@
 # [[[end]]]
 
 [project]
-name = "aider-chat"
+name = "aider-chat-typed"
 description = "Aider is AI pair programming in your terminal"
 readme = "README.md"
 classifiers = [
@@ -27,7 +27,7 @@ dynamic = ["dependencies", "optional-dependencies", "version"]
 Homepage = "https://github.com/Aider-AI/aider"
 
 [project.scripts]
-aider = "aider.main:main"
+aider-typed = "aider.main:main"
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
