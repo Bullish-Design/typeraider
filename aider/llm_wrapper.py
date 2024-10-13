@@ -6,7 +6,7 @@
 import functools
 import json
 from datetime import datetime
-from ..log.logger import get_logger
+from .log.logger import get_logger
 
 logger = get_logger("llm_wrapper")
 
@@ -20,13 +20,13 @@ def log_io_to_file(func):
         input_log = (
             f"[{timestamp}] {func_name} - Inputs: {json.dumps(kwargs, default=str)}\n"
         )
-        logger.info(input_log)
+        logger.warning(input_log)
         result = func(*args, **kwargs)
 
         output_log = (
             f"[{timestamp}] {func_name} - Outputs: {json.dumps(result, default=str)}\n"
         )
-        logger.debug(output_log)
+        logger.warning(output_log)
         with open("litellm_io_log.log", "a") as f:
             f.write(input_log)
             f.write(output_log)

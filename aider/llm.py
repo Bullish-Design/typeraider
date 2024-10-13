@@ -3,6 +3,9 @@ import os
 import warnings
 
 from .llm_wrapper import LiteLLMLogger
+from .log.logger import get_logger
+
+logger = get_logger("llm_wrapper")
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -26,6 +29,7 @@ class LazyLiteLLM:
         return getattr(self._lazy_module, name)
 
     def _load_litellm(self):
+        logger.warning("Loading litellm")
         if self._lazy_module is not None:
             return
 

@@ -26,7 +26,8 @@ devenv.local.nix
 .envrc
 
 # Logs
-.log
+*.log
+*log/
 
 # Cpython
 __pycache__/

@@ -24,6 +24,39 @@ from aider.report import report_uncaught_exceptions
 from aider.versioncheck import check_version, install_from_main_branch, install_upgrade
 
 from .dump import dump  # noqa: F401
+from .log.logger import get_logger
+
+# import logging
+
+"""
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    # Prevent adding multiple handlers if the logger already has handlers
+    if not logger.handlers:
+        # Create handlers
+        # c_handler = logging.StreamHandler()
+        f_handler = logging.FileHandler("aider.log")
+        # c_handler.setLevel(logging.INFO)
+        f_handler.setLevel(logging.INFO)
+
+        # Create formatters and add them to handlers
+        # c_format = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+        f_format = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        # c_handler.setFormatter(c_format)
+        f_handler.setFormatter(f_format)
+
+        # Add handlers to the logger
+        # logger.addHandler(c_handler)
+        logger.addHandler(f_handler)
+
+    return logger
+"""
+
+logger = get_logger("typed_aider_main")
 
 
 def check_config_files_for_yes(config_files):
@@ -35,8 +68,12 @@ def check_config_files_for_yes(config_files):
                     for line in f:
                         if line.strip().startswith("yes:"):
                             print("Configuration error detected.")
-                            print(f"The file {config_file} contains a line starting with 'yes:'")
-                            print("Please replace 'yes:' with 'yes-always:' in this file.")
+                            print(
+                                f"The file {config_file} contains a line starting with 'yes:'"
+                            )
+                            print(
+                                "Please replace 'yes:' with 'yes-always:' in this file."
+                            )
                             found = True
             except Exception:
                 pass
@@ -90,9 +127,13 @@ def setup_git(git_root, io):
     if git_root:
         repo = git.Repo(git_root)
     elif Path.cwd() == Path.home():
-        io.tool_warning("You should probably run aider in a directory, not your home dir.")
+        io.tool_warning(
+            "You should probably run aider in a directory, not your home dir."
+        )
         return
-    elif io.confirm_ask("No git repo found, create one to track aider's changes (recommended)?"):
+    elif io.confirm_ask(
+        "No git repo found, create one to track aider's changes (recommended)?"
+    ):
         git_root = str(Path.cwd().resolve())
         repo = make_new_repo(git_root, io)
 
@@ -120,7 +161,9 @@ def setup_git(git_root, io):
             io.tool_warning('Update git name with: git config user.name "Your Name"')
         if not user_email:
             git_config.set_value("user", "email", "you@example.com")
-            io.tool_warning('Update git email with: git config user.email "you@example.com"')
+            io.tool_warning(
+                'Update git email with: git config user.email "you@example.com"'
+            )
 
     return repo.working_tree_dir
 
@@ -155,7 +198,9 @@ def check_gitignore(git_root, io, ask=True):
     if not patterns_to_add:
         return
 
-    if ask and not io.confirm_ask(f"Add {', '.join(patterns_to_add)} to .gitignore (recommended)?"):
+    if ask and not io.confirm_ask(
+        f"Add {', '.join(patterns_to_add)} to .gitignore (recommended)?"
+    ):
         return
 
     if content and not content.endswith("\n"):
@@ -322,7 +367,9 @@ def register_litellm_models(git_root, model_metadata_fname, io, verbose=False):
     )
 
     try:
-        model_metadata_files_loaded = models.register_litellm_models(model_metatdata_files)
+        model_metadata_files_loaded = models.register_litellm_models(
+            model_metatdata_files
+        )
         if len(model_metadata_files_loaded) > 0 and verbose:
             io.tool_output("Loaded model metadata from:")
             for model_metadata_file in model_metadata_files_loaded:
@@ -355,7 +402,9 @@ def sanity_check_repo(repo, io):
 
     if bad_ver:
         io.tool_error("Aider only works with git repos with version number 1 or 2.")
-        io.tool_output("You may be able to convert your repo: git update-index --index-version=2")
+        io.tool_output(
+            "You may be able to convert your repo: git update-index --index-version=2"
+        )
         io.tool_output("Or run aider --no-git to proceed without using git.")
         io.tool_output(urls.git_index_version)
         return False
@@ -366,6 +415,10 @@ def sanity_check_repo(repo, io):
 
 
 def main(argv=None, input=None, output=None, force_git_root=None, return_coder=False):
+    logger.warning(f"Entering Main Init")
+    with open("aider.log", "a") as f:
+        f.write(f"Entering Main\n")
+
     report_uncaught_exceptions()
 
     if argv is None:
@@ -395,7 +448,10 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     try:
         args, unknown = parser.parse_known_args(argv)
     except AttributeError as e:
-        if all(word in str(e) for word in ["bool", "object", "has", "no", "attribute", "strip"]):
+        if all(
+            word in str(e)
+            for word in ["bool", "object", "has", "no", "attribute", "strip"]
+        ):
             if check_config_files_for_yes(default_config_files):
                 return 1
         raise e
@@ -570,7 +626,9 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         os.environ["OPENAI_ORGANIZATION"] = args.openai_organization_id
 
     register_models(git_root, args.model_settings_file, io, verbose=args.verbose)
-    register_litellm_models(git_root, args.model_metadata_file, io, verbose=args.verbose)
+    register_litellm_models(
+        git_root, args.model_metadata_file, io, verbose=args.verbose
+    )
 
     if not args.model:
         args.model = "gpt-4o-2024-08-06"
@@ -627,7 +685,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             return 1
 
     commands = Commands(
-        io, None, verify_ssl=args.verify_ssl, args=args, parser=parser, verbose=args.verbose
+        io,
+        None,
+        verify_ssl=args.verify_ssl,
+        args=args,
+        parser=parser,
+        verbose=args.verbose,
     )
 
     summarizer = ChatSummary(
@@ -730,7 +793,9 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         args.pretty = False
         io.tool_output("VSCode terminal detected, pretty output has been disabled.")
 
-    io.tool_output('Use /help <question> for help, run "aider --help" to see cmd line args')
+    io.tool_output(
+        'Use /help <question> for help, run "aider --help" to see cmd line args'
+    )
 
     if git_root and Path.cwd().resolve() != Path(git_root).resolve():
         io.tool_warning(
@@ -812,7 +877,9 @@ def check_and_load_imports(io, verbose=False):
                 load_slow_imports(swallow=False)
             except Exception as err:
                 io.tool_error(str(err))
-                io.tool_output("Error loading required imports. Did you install aider properly?")
+                io.tool_output(
+                    "Error loading required imports. Did you install aider properly?"
+                )
                 io.tool_output("https://aider.chat/docs/install/install.html")
                 sys.exit(1)
 
@@ -851,5 +918,6 @@ def load_slow_imports(swallow=True):
 
 
 if __name__ == "__main__":
+    logger.warning(f"Entering Main")
     status = main()
     sys.exit(status)

@@ -32,42 +32,44 @@ aider-typed = "aider.main:main"
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements_local.txt" }
 
-[tool.setuptools.dynamic.optional-dependencies]
-dev = { file = "requirements/requirements-dev.txt" }
-help = { file = "requirements/requirements-help.txt" }
-browser = { file = "requirements/requirements-browser.txt" }
-playwright = { file = "requirements/requirements-playwright.txt" }
+#"""
+#[tool.setuptools.dynamic.optional-dependencies]
+#dev = { file = "requirements/requirements-dev.txt" }
+#help = { file = "requirements/requirements-help.txt" }
+#browser = { file = "requirements/requirements-browser.txt" }
+#playwright = { file = "requirements/requirements-playwright.txt" }
 
 [tool.setuptools.packages.find]
 include = ["aider*", "aider.website"]
 
-[tool.setuptools.package-data]
-"aider" = ["queries/*.scm"]
-"aider.website" = ["**/*.md"]
+#[tool.setuptools.package-data]
+#"aider" = ["queries/*.scm"]
+#"aider.website" = ["**/*.md"]
 
-[tool.setuptools.exclude-package-data]
-"aider.website" = [
-# [[[cog
-# cog.out("\n".join(f'    "{pat}",' for pat in exclude_website_pats))
-# ]]]
-"examples/**",
-"_posts/**",
-"HISTORY.md",
-"docs/benchmarks*md",
-"docs/ctags.md",
-"docs/unified-diffs.md",
-"docs/leaderboards/index.md",
-"assets/**",
-# [[[end]]]
-]
+#[tool.setuptools.exclude-package-data]
+#"aider.website" = [
+## [[[cog
+## cog.out("\n".join(f'    "{pat}",' for pat in exclude_website_pats))
+## ]]]
+#"examples/**",
+#"_posts/**",
+#"HISTORY.md",
+#"docs/benchmarks*md",
+#"docs/ctags.md",
+#"docs/unified-diffs.md",
+#"docs/leaderboards/index.md",
+#"assets/**",
+## [[[end]]]
+#]
 
-[build-system]
-requires = ["setuptools>=68", "setuptools_scm[toml]>=8"]
-build-backend = "setuptools.build_meta"
+#[build-system]
+#requires = ["setuptools>=68", "setuptools_scm[toml]>=8"]
+#build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
-write_to = "aider/__version__.py"
+#[tool.setuptools_scm]
+#write_to = "aider/__version__.py"
 
-[tool.codespell]
-skip = "*.svg,Gemfile.lock"
-write-changes = true
+#[tool.codespell]
+#skip = "*.svg,Gemfile.lock"
+#write-changes = true
+#"""
