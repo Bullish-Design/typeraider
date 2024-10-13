@@ -41,7 +41,9 @@ class LazyLiteLLM:
         self._lazy_module._logging._disable_debugging()
 
 
-litellm_instance = LazyLiteLLM()
-litellm = LiteLLMLogger(litellm_instance)
+litellm = LazyLiteLLM()
+
+# litellm_instance = LazyLiteLLM()
+# litellm = LiteLLMLogger(litellm_instance)
 
 __all__ = [litellm]

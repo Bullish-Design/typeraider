@@ -33,6 +33,11 @@ from aider.utils import format_content, format_messages, format_tokens, is_image
 from ..dump import dump  # noqa: F401
 from .chat_chunks import ChatChunks
 
+from ..log.logger import get_logger
+from ..llm_wrapper import log_io_to_file, log_methods
+
+logger = get_logger("base_coder")
+
 
 class MissingAPIKeyError(ValueError):
     pass
@@ -56,6 +61,7 @@ all_fences = [
 ]
 
 
+@log_methods
 class Coder:
     abs_fnames = None
     abs_read_only_fnames = None
@@ -91,6 +97,7 @@ class Coder:
     ignore_mentions = None
     chat_language = None
 
+    ##@log_io_to_file
     @classmethod
     def create(
         self,
@@ -128,13 +135,19 @@ class Coder:
             # confused the new LLM. It may try and imitate it, disobeying
             # the system prompt.
             done_messages = from_coder.done_messages
-            if edit_format != from_coder.edit_format and done_messages and summarize_from_coder:
+            if (
+                edit_format != from_coder.edit_format
+                and done_messages
+                and summarize_from_coder
+            ):
                 done_messages = from_coder.summarizer.summarize_all(done_messages)
 
             # Bring along context from the old Coder
             update = dict(
                 fnames=list(from_coder.abs_fnames),
-                read_only_fnames=list(from_coder.abs_read_only_fnames),  # Copy read-only files
+                read_only_fnames=list(
+                    from_coder.abs_read_only_fnames
+                ),  # Copy read-only files
                 done_messages=done_messages,
                 cur_messages=from_coder.cur_messages,
                 aider_commit_hashes=from_coder.aider_commit_hashes,
@@ -155,11 +168,13 @@ class Coder:
 
         raise ValueError(f"Unknown edit format {edit_format}")
 
+    ##@log_io_to_file
     def clone(self, **kwargs):
         new_coder = Coder.create(from_coder=self, **kwargs)
         new_coder.ignore_mentions = self.ignore_mentions
         return new_coder
 
+    # @log_io_to_file
     def get_announcements(self):
         lines = []
         lines.append(f"Aider v{__version__}")
@@ -231,6 +246,7 @@ class Coder:
 
         return lines
 
+    # @log_io_to_file
     def __init__(
         self,
         main_model,
@@ -377,7 +393,9 @@ class Coder:
                 if os.path.exists(abs_fname):
                     self.abs_read_only_fnames.add(abs_fname)
                 else:
-                    self.io.tool_warning(f"Error: Read-only file {fname} does not exist. Skipping.")
+                    self.io.tool_warning(
+                        f"Error: Read-only file {fname} does not exist. Skipping."
+                    )
 
         if map_tokens is None:
             use_repo_map = main_model.use_repo_map
@@ -387,7 +405,9 @@ class Coder:
 
         max_inp_tokens = self.main_model.info.get("max_input_tokens") or 0
 
-        has_map_prompt = hasattr(self, "gpt_prompts") and self.gpt_prompts.repo_content_prefix
+        has_map_prompt = (
+            hasattr(self, "gpt_prompts") and self.gpt_prompts.repo_content_prefix
+        )
 
         if use_repo_map and self.repo and has_map_prompt:
             self.repo_map = RepoMap(
@@ -441,6 +461,7 @@ class Coder:
         for lang, cmd in lint_cmds.items():
             self.linter.set_linter(lang, cmd)
 
+    # @log_io_to_file
     def show_announcements(self):
         bold = True
         for line in self.get_announcements():
@@ -491,6 +512,7 @@ class Coder:
             else:
                 yield fname, content
 
+    # @log_io_to_file
     def choose_fence(self):
         all_content = ""
         for _fname, content in self.get_abs_fnames_content():
@@ -503,7 +525,10 @@ class Coder:
         lines = all_content.splitlines()
         good = False
         for fence_open, fence_close in self.fences:
-            if any(line.startswith(fence_open) or line.startswith(fence_close) for line in lines):
+            if any(
+                line.startswith(fence_open) or line.startswith(fence_close)
+                for line in lines
+            ):
                 continue
             good = True
             break
@@ -519,6 +544,7 @@ class Coder:
 
         return
 
+    # @log_io_to_file
     def get_files_content(self, fnames=None):
         if not fnames:
             fnames = self.abs_fnames
@@ -541,6 +567,7 @@ class Coder:
 
         return prompt
 
+    # @log_io_to_file
     def get_read_only_files_content(self):
         prompt = ""
         for fname in self.abs_read_only_fnames:
@@ -554,6 +581,7 @@ class Coder:
                 prompt += f"{self.fence[1]}\n"
         return prompt
 
+    # @log_io_to_file
     def get_cur_message_text(self):
         text = ""
         for msg in self.cur_messages:
@@ -581,6 +609,7 @@ class Coder:
 
         return matches
 
+    # @log_io_to_file
     def get_repo_map(self, force_refresh=False):
         if not self.repo_map:
             return
@@ -622,6 +651,7 @@ class Coder:
 
         return repo_content
 
+    # @log_io_to_file
     def get_repo_messages(self):
         repo_messages = []
         repo_content = self.get_repo_map()
@@ -635,13 +665,15 @@ class Coder:
             ]
         return repo_messages
 
+    # @log_io_to_file
     def get_readonly_files_messages(self):
         readonly_messages = []
         read_only_content = self.get_read_only_files_content()
         if read_only_content:
             readonly_messages += [
                 dict(
-                    role="user", content=self.gpt_prompts.read_only_files_prefix + read_only_content
+                    role="user",
+                    content=self.gpt_prompts.read_only_files_prefix + read_only_content,
                 ),
                 dict(
                     role="assistant",
@@ -650,6 +682,7 @@ class Coder:
             ]
         return readonly_messages
 
+    # @log_io_to_file
     def get_chat_files_messages(self):
         chat_files_messages = []
         if self.abs_fnames:
@@ -678,6 +711,7 @@ class Coder:
 
         return chat_files_messages
 
+    # @log_io_to_file
     def get_images_message(self):
         if not self.main_model.accepts_images:
             return None
@@ -693,7 +727,10 @@ class Coder:
                     rel_fname = self.get_rel_fname(fname)
                     image_messages += [
                         {"type": "text", "text": f"Image file: {rel_fname}"},
-                        {"type": "image_url", "image_url": {"url": image_url, "detail": "high"}},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_url, "detail": "high"},
+                        },
                     ]
 
         if not image_messages:
@@ -701,11 +738,13 @@ class Coder:
 
         return {"role": "user", "content": image_messages}
 
+    # @log_io_to_file
     def run_stream(self, user_message):
         self.io.user_input(user_message)
         self.init_before_message()
         yield from self.send_message(user_message)
 
+    # @log_io_to_file
     def init_before_message(self):
         self.aider_edited_files = set()
         self.reflected_message = None
@@ -717,6 +756,7 @@ class Coder:
         if self.repo:
             self.commit_before_message.append(self.repo.get_head_commit_sha())
 
+    # @log_io_to_file
     def run(self, with_message=None, preproc=True):
         try:
             if with_message:
@@ -734,11 +774,16 @@ class Coder:
         except EOFError:
             return
 
+    # @log_io_to_file
     def get_input(self):
         inchat_files = self.get_inchat_relative_files()
-        read_only_files = [self.get_rel_fname(fname) for fname in self.abs_read_only_fnames]
+        read_only_files = [
+            self.get_rel_fname(fname) for fname in self.abs_read_only_fnames
+        ]
         all_files = sorted(set(inchat_files + read_only_files))
-        edit_format = "" if self.edit_format == self.main_model.edit_format else self.edit_format
+        edit_format = (
+            "" if self.edit_format == self.main_model.edit_format else self.edit_format
+        )
         return self.io.get_input(
             self.root,
             all_files,
@@ -748,6 +793,7 @@ class Coder:
             edit_format=edit_format,
         )
 
+    # @log_io_to_file
     def preproc_user_input(self, inp):
         if not inp:
             return
@@ -760,6 +806,7 @@ class Coder:
 
         return inp
 
+    # @log_io_to_file
     def run_one(self, user_message, preproc):
         self.init_before_message()
 
@@ -776,12 +823,15 @@ class Coder:
                 break
 
             if self.num_reflections >= self.max_reflections:
-                self.io.tool_warning(f"Only {self.max_reflections} reflections allowed, stopping.")
+                self.io.tool_warning(
+                    f"Only {self.max_reflections} reflections allowed, stopping."
+                )
                 return
 
             self.num_reflections += 1
             message = self.reflected_message
 
+    # @log_io_to_file
     def check_for_urls(self, inp):
         url_pattern = re.compile(r"(https?://[^\s/$.?#].[^\s]*[^\s,.])")
         urls = list(set(url_pattern.findall(inp)))  # Use set to remove duplicates
@@ -812,6 +862,7 @@ class Coder:
 
         self.last_keyboard_interrupt = now
 
+    # @log_io_to_file
     def summarize_start(self):
         if not self.summarizer.too_big(self.done_messages):
             return
@@ -824,15 +875,19 @@ class Coder:
         self.summarizer_thread = threading.Thread(target=self.summarize_worker)
         self.summarizer_thread.start()
 
+    # @log_io_to_file
     def summarize_worker(self):
         try:
-            self.summarized_done_messages = self.summarizer.summarize(self.done_messages)
+            self.summarized_done_messages = self.summarizer.summarize(
+                self.done_messages
+            )
         except ValueError as err:
             self.io.tool_warning(err.args[0])
 
         if self.verbose:
             self.io.tool_output("Finished summarizing chat history.")
 
+    # @log_io_to_file
     def summarize_end(self):
         if self.summarizer_thread is None:
             return
@@ -843,6 +898,7 @@ class Coder:
         self.done_messages = self.summarized_done_messages
         self.summarized_done_messages = []
 
+    # @log_io_to_file
     def move_back_cur_messages(self, message):
         self.done_messages += self.cur_messages
         self.summarize_start()
@@ -855,6 +911,7 @@ class Coder:
             ]
         self.cur_messages = []
 
+    # @log_io_to_file
     def get_user_language(self):
         if self.chat_language:
             return self.chat_language
@@ -875,6 +932,7 @@ class Coder:
 
         return None
 
+    # @log_io_to_file
     def get_platform_info(self):
         platform_text = f"- Platform: {platform.platform()}\n"
         shell_var = "COMSPEC" if os.name == "nt" else "SHELL"
@@ -907,24 +965,29 @@ class Coder:
 
         if self.test_cmd:
             if self.auto_test:
-                platform_text += (
-                    "- The user's pre-commit runs this test command, don't suggest running them: "
-                )
+                platform_text += "- The user's pre-commit runs this test command, don't suggest running them: "
             else:
                 platform_text += "- The user prefers this test command: "
             platform_text += self.test_cmd + "\n"
 
         return platform_text
 
+    # @log_io_to_file
     def fmt_system_prompt(self, prompt):
         lazy_prompt = self.gpt_prompts.lazy_prompt if self.main_model.lazy else ""
         platform_text = self.get_platform_info()
 
         if self.suggest_shell_commands:
-            shell_cmd_prompt = self.gpt_prompts.shell_cmd_prompt.format(platform=platform_text)
-            shell_cmd_reminder = self.gpt_prompts.shell_cmd_reminder.format(platform=platform_text)
+            shell_cmd_prompt = self.gpt_prompts.shell_cmd_prompt.format(
+                platform=platform_text
+            )
+            shell_cmd_reminder = self.gpt_prompts.shell_cmd_reminder.format(
+                platform=platform_text
+            )
         else:
-            shell_cmd_prompt = self.gpt_prompts.no_shell_cmd_prompt.format(platform=platform_text)
+            shell_cmd_prompt = self.gpt_prompts.no_shell_cmd_prompt.format(
+                platform=platform_text
+            )
             shell_cmd_reminder = self.gpt_prompts.no_shell_cmd_reminder.format(
                 platform=platform_text
             )
@@ -938,6 +1001,7 @@ class Coder:
         )
         return prompt
 
+    # @log_io_to_file
     def format_chat_chunks(self):
         self.choose_fence()
         main_sys = self.fmt_system_prompt(self.gpt_prompts.main_system)
@@ -998,7 +1062,8 @@ class Coder:
         if self.gpt_prompts.system_reminder:
             reminder_message = [
                 dict(
-                    role="system", content=self.fmt_system_prompt(self.gpt_prompts.system_reminder)
+                    role="system",
+                    content=self.fmt_system_prompt(self.gpt_prompts.system_reminder),
                 ),
             ]
         else:
@@ -1040,6 +1105,7 @@ class Coder:
 
         return chunks
 
+    # @log_io_to_file
     def format_messages(self):
         chunks = self.format_chat_chunks()
         if self.add_cache_headers:
@@ -1047,6 +1113,7 @@ class Coder:
 
         return chunks
 
+    # @log_io_to_file
     def warm_cache(self, chunks):
         if not self.add_cache_headers:
             return
@@ -1092,7 +1159,9 @@ class Coder:
                 ) or getattr(completion.usage, "cache_read_input_tokens", 0)
 
                 if self.verbose:
-                    self.io.tool_output(f"Warmed {format_tokens(cache_hit_tokens)} cached tokens.")
+                    self.io.tool_output(
+                        f"Warmed {format_tokens(cache_hit_tokens)} cached tokens."
+                    )
 
         self.cache_warming_thread = threading.Timer(0, warm_cache_worker)
         self.cache_warming_thread.daemon = True
@@ -1100,6 +1169,7 @@ class Coder:
 
         return chunks
 
+    # @log_io_to_file
     def send_message(self, inp):
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -1158,11 +1228,17 @@ class Coder:
                         messages[-1]["content"] = self.multi_response_content
                     else:
                         messages.append(
-                            dict(role="assistant", content=self.multi_response_content, prefix=True)
+                            dict(
+                                role="assistant",
+                                content=self.multi_response_content,
+                                prefix=True,
+                            )
                         )
                 except Exception as err:
                     self.io.tool_error(f"Unexpected error: {err}")
-                    lines = traceback.format_exception(type(err), err, err.__traceback__)
+                    lines = traceback.format_exception(
+                        type(err), err, err.__traceback__
+                    )
                     self.io.tool_error("".join(lines))
                     return
         finally:
@@ -1211,7 +1287,9 @@ class Coder:
             self.aider_edited_files.update(edited)
             saved_message = self.auto_commit(edited)
 
-            if not saved_message and hasattr(self.gpt_prompts, "files_content_gpt_edits_no_repo"):
+            if not saved_message and hasattr(
+                self.gpt_prompts, "files_content_gpt_edits_no_repo"
+            ):
                 saved_message = self.gpt_prompts.files_content_gpt_edits_no_repo
 
             self.move_back_cur_messages(saved_message)
@@ -1254,16 +1332,20 @@ class Coder:
             else:
                 self.reflected_message = add_rel_files_message
 
+    # @log_io_to_file
     def reply_completed(self):
         pass
 
+    # @log_io_to_file
     def show_exhausted_error(self):
         output_tokens = 0
         if self.partial_response_content:
             output_tokens = self.main_model.token_count(self.partial_response_content)
         max_output_tokens = self.main_model.info.get("max_output_tokens") or 0
 
-        input_tokens = self.main_model.token_count(self.format_messages().all_messages())
+        input_tokens = self.main_model.token_count(
+            self.format_messages().all_messages()
+        )
         max_input_tokens = self.main_model.info.get("max_input_tokens") or 0
 
         total_tokens = input_tokens + output_tokens
@@ -1287,7 +1369,9 @@ class Coder:
         res.append("Token counts below are approximate.")
         res.append("")
         res.append(f"Input tokens: ~{input_tokens:,} of {max_input_tokens:,}{inp_err}")
-        res.append(f"Output tokens: ~{output_tokens:,} of {max_output_tokens:,}{out_err}")
+        res.append(
+            f"Output tokens: ~{output_tokens:,} of {max_output_tokens:,}{out_err}"
+        )
         res.append(f"Total tokens: ~{total_tokens:,} of {max_input_tokens:,}{tot_err}")
 
         if output_tokens >= max_output_tokens:
@@ -1314,6 +1398,7 @@ class Coder:
         res = "".join([line + "\n" for line in res])
         self.io.tool_error(res)
 
+    # @log_io_to_file
     def lint_edited(self, fnames):
         res = ""
         for fname in fnames:
@@ -1329,9 +1414,12 @@ class Coder:
 
         return res
 
+    # @log_io_to_file
     def update_cur_messages(self):
         if self.partial_response_content:
-            self.cur_messages += [dict(role="assistant", content=self.partial_response_content)]
+            self.cur_messages += [
+                dict(role="assistant", content=self.partial_response_content)
+            ]
         if self.partial_response_function_call:
             self.cur_messages += [
                 dict(
@@ -1341,6 +1429,7 @@ class Coder:
                 )
             ]
 
+    # @log_io_to_file
     def get_file_mentions(self, content):
         words = set(word for word in content.split())
 
@@ -1364,7 +1453,13 @@ class Coder:
             fname = os.path.basename(rel_fname)
 
             # Don't add basenames that could be plain words like "run" or "make"
-            if "/" in fname or "\\" in fname or "." in fname or "_" in fname or "-" in fname:
+            if (
+                "/" in fname
+                or "\\" in fname
+                or "." in fname
+                or "_" in fname
+                or "-" in fname
+            ):
                 if fname not in fname_to_rel_fnames:
                     fname_to_rel_fnames[fname] = []
                 fname_to_rel_fnames[fname].append(rel_fname)
@@ -1375,6 +1470,7 @@ class Coder:
 
         return mentioned_rel_fnames
 
+    # @log_io_to_file
     def check_for_file_mentions(self, content):
         mentioned_rel_fnames = self.get_file_mentions(content)
 
@@ -1386,7 +1482,9 @@ class Coder:
         added_fnames = []
         group = ConfirmGroup(new_mentions)
         for rel_fname in sorted(new_mentions):
-            if self.io.confirm_ask(f"Add {rel_fname} to the chat?", group=group, allow_never=True):
+            if self.io.confirm_ask(
+                f"Add {rel_fname} to the chat?", group=group, allow_never=True
+            ):
                 self.add_rel_fname(rel_fname)
                 added_fnames.append(rel_fname)
             else:
@@ -1395,6 +1493,7 @@ class Coder:
         if added_fnames:
             return prompts.added_files.format(fnames=", ".join(added_fnames))
 
+    # @log_io_to_file
     def send(self, messages, model=None, functions=None):
         if not model:
             model = self.main_model
@@ -1444,6 +1543,7 @@ class Coder:
 
             self.calculate_and_show_tokens_and_cost(messages, completion)
 
+    # @log_io_to_file
     def show_send_output(self, completion):
         if self.verbose:
             print(completion)
@@ -1488,6 +1588,7 @@ class Coder:
         ):
             raise FinishReasonLength()
 
+    # @log_io_to_file
     def show_send_output_stream(self, completion):
         for chunk in completion:
             if len(chunk.choices) == 0:
@@ -1524,20 +1625,23 @@ class Coder:
                     sys.stdout.write(text)
                 except UnicodeEncodeError:
                     # Safely encode and decode the text
-                    safe_text = text.encode(sys.stdout.encoding, errors="backslashreplace").decode(
-                        sys.stdout.encoding
-                    )
+                    safe_text = text.encode(
+                        sys.stdout.encoding, errors="backslashreplace"
+                    ).decode(sys.stdout.encoding)
                     sys.stdout.write(safe_text)
                 sys.stdout.flush()
                 yield text
 
+    # @log_io_to_file
     def live_incremental_response(self, final):
         show_resp = self.render_incremental_response(final)
         self.mdstream.update(show_resp, final=final)
 
+    # @log_io_to_file
     def render_incremental_response(self, final):
         return self.get_multi_response_content()
 
+    # @log_io_to_file
     def calculate_and_show_tokens_and_cost(self, messages, completion=None):
         prompt_tokens = 0
         completion_tokens = 0
@@ -1547,10 +1651,12 @@ class Coder:
         if completion and hasattr(completion, "usage") and completion.usage is not None:
             prompt_tokens = completion.usage.prompt_tokens
             completion_tokens = completion.usage.completion_tokens
-            cache_hit_tokens = getattr(completion.usage, "prompt_cache_hit_tokens", 0) or getattr(
-                completion.usage, "cache_read_input_tokens", 0
+            cache_hit_tokens = getattr(
+                completion.usage, "prompt_cache_hit_tokens", 0
+            ) or getattr(completion.usage, "cache_read_input_tokens", 0)
+            cache_write_tokens = getattr(
+                completion.usage, "cache_creation_input_tokens", 0
             )
-            cache_write_tokens = getattr(completion.usage, "cache_creation_input_tokens", 0)
 
             if hasattr(completion.usage, "cache_read_input_tokens") or hasattr(
                 completion.usage, "cache_creation_input_tokens"
@@ -1563,7 +1669,9 @@ class Coder:
 
         else:
             prompt_tokens = self.main_model.token_count(messages)
-            completion_tokens = self.main_model.token_count(self.partial_response_content)
+            completion_tokens = self.main_model.token_count(
+                self.partial_response_content
+            )
             self.message_tokens_sent += prompt_tokens
 
         self.message_tokens_received += completion_tokens
@@ -1599,7 +1707,9 @@ class Coder:
         if input_cost_per_token_cache_hit:
             # must be deepseek
             cost += input_cost_per_token_cache_hit * cache_hit_tokens
-            cost += (prompt_tokens - input_cost_per_token_cache_hit) * input_cost_per_token
+            cost += (
+                prompt_tokens - input_cost_per_token_cache_hit
+            ) * input_cost_per_token
         else:
             # hard code the anthropic adjustments, no-ops for other models since cache_x_tokens==0
             cost += cache_write_tokens * input_cost_per_token * 1.25
@@ -1637,6 +1747,7 @@ class Coder:
 
         self.usage_report = tokens_report + sep + cost_report
 
+    # @log_io_to_file
     def show_usage_report(self):
         if self.usage_report:
             self.io.tool_output(self.usage_report)
@@ -1644,6 +1755,7 @@ class Coder:
             self.message_tokens_sent = 0
             self.message_tokens_received = 0
 
+    # @log_io_to_file
     def get_multi_response_content(self, final=False):
         cur = self.multi_response_content or ""
         new = self.partial_response_content or ""
@@ -1658,16 +1770,19 @@ class Coder:
         except ValueError:
             return fname
 
+    # @log_io_to_file
     def get_inchat_relative_files(self):
         files = [self.get_rel_fname(fname) for fname in self.abs_fnames]
         return sorted(set(files))
 
+    # @log_io_to_file
     def is_file_safe(self, fname):
         try:
             return Path(self.abs_root_path(fname)).is_file()
         except OSError:
             return
 
+    # @log_io_to_file
     def get_all_relative_files(self):
         if self.repo:
             files = self.repo.get_tracked_files()
@@ -1679,17 +1794,22 @@ class Coder:
 
         return sorted(set(files))
 
+    # @log_io_to_file
     def get_all_abs_files(self):
         files = self.get_all_relative_files()
         files = [self.abs_root_path(path) for path in files]
         return files
 
+    # @log_io_to_file
     def get_addable_relative_files(self):
         all_files = set(self.get_all_relative_files())
         inchat_files = set(self.get_inchat_relative_files())
-        read_only_files = set(self.get_rel_fname(fname) for fname in self.abs_read_only_fnames)
+        read_only_files = set(
+            self.get_rel_fname(fname) for fname in self.abs_read_only_fnames
+        )
         return all_files - inchat_files - read_only_files
 
+    # @log_io_to_file
     def check_for_dirty_commit(self, path):
         if not self.repo:
             return
@@ -1706,6 +1826,7 @@ class Coder:
         self.io.tool_output(f"Committing {path} before applying edits.")
         self.need_commit_before_edits.add(path)
 
+    # @log_io_to_file
     def allowed_to_edit(self, path):
         full_path = self.abs_root_path(path)
         if self.repo:
@@ -1755,6 +1876,7 @@ class Coder:
 
     warning_given = False
 
+    # @log_io_to_file
     def check_added_files(self):
         if self.warning_given:
             return
@@ -1776,10 +1898,13 @@ class Coder:
         if tokens < warn_number_of_tokens:
             return
 
-        self.io.tool_warning("Warning: it's best to only add files that need changes to the chat.")
+        self.io.tool_warning(
+            "Warning: it's best to only add files that need changes to the chat."
+        )
         self.io.tool_warning(urls.edit_errors)
         self.warning_given = True
 
+    # @log_io_to_file
     def prepare_to_edit(self, edits):
         res = []
         seen = dict()
@@ -1807,6 +1932,7 @@ class Coder:
 
         return res
 
+    # @log_io_to_file
     def apply_updates(self):
         edited = set()
         try:
@@ -1847,6 +1973,7 @@ class Coder:
 
         return edited
 
+    # @log_io_to_file
     def parse_partial_args(self):
         # dump(self.partial_response_function_call)
 
@@ -1875,7 +2002,7 @@ class Coder:
             pass
 
     # commits...
-
+    # @log_io_to_file
     def get_context_from_history(self, history):
         context = ""
         if history:
@@ -1884,6 +2011,7 @@ class Coder:
 
         return context
 
+    # @log_io_to_file
     def auto_commit(self, edited, context=None):
         if not self.repo or not self.auto_commits or self.dry_run:
             return
@@ -1906,6 +2034,7 @@ class Coder:
             self.io.tool_error(f"Unable to commit: {str(err)}")
             return
 
+    # @log_io_to_file
     def show_auto_commit_outcome(self, res):
         commit_hash, commit_message = res
         self.last_aider_commit_hash = commit_hash
@@ -1914,12 +2043,16 @@ class Coder:
         if self.show_diffs:
             self.commands.cmd_diff()
 
+    # @log_io_to_file
     def show_undo_hint(self):
         if not self.commit_before_message:
             return
         if self.commit_before_message[-1] != self.repo.get_head_commit_sha():
-            self.io.tool_output("You can use /undo to undo and discard each aider commit.")
+            self.io.tool_output(
+                "You can use /undo to undo and discard each aider commit."
+            )
 
+    # @log_io_to_file
     def dirty_commit(self):
         if not self.need_commit_before_edits:
             return
@@ -1934,12 +2067,15 @@ class Coder:
         # self.move_back_cur_messages(self.gpt_prompts.files_content_local_edits)
         return True
 
+    # @log_io_to_file
     def get_edits(self, mode="update"):
         return []
 
+    # @log_io_to_file
     def apply_edits(self, edits):
         return
 
+    # @log_io_to_file
     def run_shell_commands(self):
         if not self.suggest_shell_commands:
             return ""
@@ -1956,6 +2092,7 @@ class Coder:
                 accumulated_output += output + "\n\n"
         return accumulated_output
 
+    # @log_io_to_file
     def handle_shell_commands(self, commands_str, group):
         commands = commands_str.strip().splitlines()
         command_count = sum(
