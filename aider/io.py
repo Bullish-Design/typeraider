@@ -25,6 +25,8 @@ from aider.mdstream import MarkdownStream
 from .dump import dump  # noqa: F401
 from .utils import is_image_file
 
+from aider.llm_wrapper import log_methods
+
 
 @dataclass
 class ConfirmGroup:
@@ -36,9 +38,16 @@ class ConfirmGroup:
             self.show_group = len(items) > 1
 
 
+@log_methods
 class AutoCompleter(Completer):
     def __init__(
-        self, root, rel_fnames, addable_rel_fnames, commands, encoding, abs_read_only_fnames=None
+        self,
+        root,
+        rel_fnames,
+        addable_rel_fnames,
+        commands,
+        encoding,
+        abs_read_only_fnames=None,
     ):
         self.addable_rel_fnames = addable_rel_fnames
         self.rel_fnames = rel_fnames
@@ -90,7 +99,9 @@ class AutoCompleter(Completer):
 
             tokens = list(lexer.get_tokens(content))
             self.words.update(
-                (token[1], f"`{token[1]}`") for token in tokens if token[0] in Token.Name
+                (token[1], f"`{token[1]}`")
+                for token in tokens
+                if token[0] in Token.Name
             )
 
     def get_command_completions(self, document, complete_event, text, words):
@@ -144,12 +155,16 @@ class AutoCompleter(Completer):
             return
 
         if text[0] == "/":
-            yield from self.get_command_completions(document, complete_event, text, words)
+            yield from self.get_command_completions(
+                document, complete_event, text, words
+            )
             return
 
         candidates = self.words
         candidates.update(set(self.fname_to_rel_fnames))
-        candidates = [word if type(word) is tuple else (word, word) for word in candidates]
+        candidates = [
+            word if type(word) is tuple else (word, word) for word in candidates
+        ]
 
         last_word = words[-1]
         completions = []
@@ -166,6 +181,7 @@ class AutoCompleter(Completer):
             yield Completion(ins, start_position=pos, display=match)
 
 
+@log_methods
 class InputOutput:
     num_error_outputs = 0
     num_user_asks = 0
@@ -206,8 +222,12 @@ class InputOutput:
         self.assistant_output_color = assistant_output_color
         self.completion_menu_color = completion_menu_color if pretty else None
         self.completion_menu_bg_color = completion_menu_bg_color if pretty else None
-        self.completion_menu_current_color = completion_menu_current_color if pretty else None
-        self.completion_menu_current_bg_color = completion_menu_current_bg_color if pretty else None
+        self.completion_menu_current_color = (
+            completion_menu_current_color if pretty else None
+        )
+        self.completion_menu_current_bg_color = (
+            completion_menu_current_bg_color if pretty else None
+        )
 
         self.code_theme = code_theme
 
@@ -279,7 +299,9 @@ class InputOutput:
         # Conditionally add 'completion-menu.completion.current' style
         completion_menu_current_style = []
         if self.completion_menu_current_bg_color:
-            completion_menu_current_style.append(f"bg:{self.completion_menu_current_bg_color}")
+            completion_menu_current_style.append(
+                f"bg:{self.completion_menu_current_bg_color}"
+            )
         if self.completion_menu_current_color:
             completion_menu_current_style.append(self.completion_menu_current_color)
         if completion_menu_current_style:
@@ -339,7 +361,9 @@ class InputOutput:
 
     def rule(self):
         if self.pretty:
-            style = dict(style=self.user_input_color) if self.user_input_color else dict()
+            style = (
+                dict(style=self.user_input_color) if self.user_input_color else dict()
+            )
             self.console.rule(**style)
         else:
             print()
@@ -551,11 +575,15 @@ class InputOutput:
                     res = "y"  # Default to Yes if no input
                     break
                 res = res.lower()
-                good = any(valid_response.startswith(res) for valid_response in valid_responses)
+                good = any(
+                    valid_response.startswith(res) for valid_response in valid_responses
+                )
                 if good:
                     break
 
-                error_message = f"Please answer with one of: {', '.join(valid_responses)}"
+                error_message = (
+                    f"Please answer with one of: {', '.join(valid_responses)}"
+                )
                 self.tool_error(error_message)
 
         res = res.lower()[0]
@@ -600,7 +628,9 @@ class InputOutput:
             res = "no"
         else:
             if self.prompt_session:
-                res = self.prompt_session.prompt(question + " ", default=default, style=style)
+                res = self.prompt_session.prompt(
+                    question + " ", default=default, style=style
+                )
             else:
                 res = input(question + " ")
 
@@ -615,7 +645,9 @@ class InputOutput:
         if message.strip():
             if "\n" in message:
                 for line in message.splitlines():
-                    self.append_chat_history(line, linebreak=True, blockquote=True, strip=strip)
+                    self.append_chat_history(
+                        line, linebreak=True, blockquote=True, strip=strip
+                    )
             else:
                 hist = message.strip() if strip else message
                 self.append_chat_history(hist, linebreak=True, blockquote=True)
@@ -687,7 +719,9 @@ class InputOutput:
             text += "\n"
         if self.chat_history_file is not None:
             try:
-                with self.chat_history_file.open("a", encoding=self.encoding, errors="ignore") as f:
+                with self.chat_history_file.open(
+                    "a", encoding=self.encoding, errors="ignore"
+                ) as f:
                     f.write(text)
             except (PermissionError, OSError):
                 self.tool_error(

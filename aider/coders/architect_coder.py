@@ -1,8 +1,10 @@
 from .architect_prompts import ArchitectPrompts
 from .ask_coder import AskCoder
 from .base_coder import Coder
+from ..llm_wrapper import log_methods
 
 
+@log_methods
 class ArchitectCoder(AskCoder):
     edit_format = "architect"
     gpt_prompts = ArchitectPrompts()
