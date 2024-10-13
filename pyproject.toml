@@ -30,7 +30,7 @@ Homepage = "https://github.com/Aider-AI/aider"
 aider-typed = "aider.main:main"
 
 [tool.setuptools.dynamic]
-dependencies = { file = "requirements.txt" }
+dependencies = { file = "requirements_local.txt" }
 
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = "requirements/requirements-dev.txt" }
